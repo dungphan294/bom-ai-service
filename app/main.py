@@ -4,7 +4,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 
 from . import __version__
 from .bom import BomError, parse_bom, summarize
@@ -14,6 +14,9 @@ from .report import build_report
 from .schemas import BomAnalysis, ExtractRequest, ExtractResponse
 
 DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+INDEX_HTML = Path(__file__).parent / "static" / "index.html"
+SAMPLE_BOM = Path(__file__).parent.parent / "sample_data" / "sample_bom.xlsx"
 
 app = FastAPI(
     title="BOM AI Service",
@@ -50,6 +53,20 @@ def _analyse(content: bytes, llm: LLMClient) -> BomAnalysis:
     except LLMError as exc:
         raise HTTPException(502, str(exc)) from exc
     return BomAnalysis(summary=summary, ai_summary=ai_summary, llm_mode=llm.mode)
+
+
+@app.get("/", include_in_schema=False)
+def index() -> FileResponse:
+    """Web page that explains the service and lets people try it."""
+    return FileResponse(INDEX_HTML, media_type="text/html")
+
+
+@app.get("/sample.xlsx", include_in_schema=False)
+def sample_bom() -> FileResponse:
+    """Sample BOM, so the web page can be tried without your own file."""
+    if not SAMPLE_BOM.exists():
+        raise HTTPException(404, "Sample file not found")
+    return FileResponse(SAMPLE_BOM, media_type=XLSX_MIME, filename="sample_bom.xlsx")
 
 
 @app.get("/health")

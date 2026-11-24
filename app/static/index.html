@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BOM AI Service</title>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5d6677; --line: #dfe3ea;
+    --accent: #1f6f5c; --accent-ink: #ffffff; --accent-soft: #e4f2ee;
+    --warn: #8a5a00; --warn-soft: #fff4dc; --err: #a12b2b; --err-soft: #fde8e8;
+    --code: #eef0f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1b2029; --text: #e6e9ef; --muted: #9aa3b2; --line: #2c3340;
+      --accent: #4fbf9f; --accent-ink: #0d1a16; --accent-soft: #1d3530;
+      --warn: #f1c26b; --warn-soft: #3a2f17; --err: #f19a9a; --err-soft: #3d1f1f;
+      --code: #232a35;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 32px 16px 64px; }
+  header { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; justify-content: space-between; }
+  h1 { margin: 0; font-size: 1.7rem; }
+  .lead { color: var(--muted); margin: 8px 0 28px; max-width: 680px; }
+  .badge { font-size: .85rem; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); }
+  .badge.mock { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+  .badge.live { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .step { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .step b { display: block; margin-bottom: 4px; }
+  .step > span { color: var(--muted); font-size: .93rem; }
+  .num { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%;
+         background: var(--accent); color: var(--accent-ink); font-size: .8rem; font-weight: 700; margin-right: 6px; }
+  section.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 22px; margin-bottom: 22px; }
+  h2 { margin: 0 0 6px; font-size: 1.25rem; }
+  .how { color: var(--muted); margin: 0 0 16px; }
+  textarea { width: 100%; min-height: 110px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--line);
+             background: var(--bg); color: var(--text); font: inherit; resize: vertical; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 12px; }
+  button, .btn { font: inherit; font-weight: 600; padding: 9px 16px; border-radius: 8px; cursor: pointer;
+                 border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); text-decoration: none; }
+  button.ghost, .btn.ghost { background: transparent; color: var(--accent); }
+  button:disabled { opacity: .5; cursor: default; }
+  input[type=file] { font: inherit; color: var(--muted); max-width: 100%; }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 18px; text-align: center; color: var(--muted); }
+  .drop.over { border-color: var(--accent); background: var(--accent-soft); }
+  .drop strong { color: var(--text); }
+  .result { margin-top: 18px; }
+  .hidden { display: none; }
+  table { width: 100%; border-collapse: collapse; font-size: .95rem; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  td.num-cell, th.num-cell { text-align: right; font-variant-numeric: tabular-nums; }
+  .empty { color: var(--muted); font-style: italic; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .kpi { background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+  .kpi small { color: var(--muted); display: block; }
+  .kpi b { font-size: 1.3rem; font-variant-numeric: tabular-nums; }
+  h3 { font-size: 1rem; margin: 18px 0 8px; }
+  .ai { background: var(--accent-soft); border-radius: 8px; padding: 12px 14px; white-space: pre-wrap; }
+  .issues { background: var(--warn-soft); color: var(--warn); border-radius: 8px; padding: 10px 14px 10px 30px; margin: 0; }
+  .error { background: var(--err-soft); color: var(--err); border-radius: 8px; padding: 10px 14px; margin-top: 14px; }
+  code { background: var(--code); padding: 1px 6px; border-radius: 4px; font-size: .9em; }
+  .cols { overflow-x: auto; }
+  .tablewrap { overflow-x: auto; }
+  footer { color: var(--muted); font-size: .92rem; margin-top: 8px; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>BOM AI Service</h1>
+    <span id="mode" class="badge">checking…</span>
+  </header>
+  <p class="lead">A small tool for engineering paperwork. It reads a customer email or an Excel parts list
+    (bill of materials, BOM), does the maths in Python and lets an AI write the summary text.
+    Every result is a draft for a person to check.</p>
+
+  <div class="steps">
+    <div class="step"><b><span class="num">1</span>Paste a customer email</b>
+      <span>Get the part, material, quantity, size, supplier and deadline as a clear list.</span></div>
+    <div class="step"><b><span class="num">2</span>Upload an Excel BOM</b>
+      <span>Get totals, weight per material and a list of rows with missing data.</span></div>
+    <div class="step"><b><span class="num">3</span>Download a Word report</b>
+      <span>The same analysis as a .docx file you can edit and send.</span></div>
+  </div>
+
+  <!-- 1. Extract -->
+  <section class="card">
+    <h2><span class="num">1</span>Customer email → part data</h2>
+    <p class="how">Paste the text of a request. The example below is filled in so you can try it straight away.</p>
+    <textarea id="emailText">Hi, we need 250 pcs of the hopper bracket in stainless steel, 400 x 120 x 8 mm, delivered before 2026-12-15. Supplier: MetaalTwente.</textarea>
+    <div class="row">
+      <button id="extractBtn">Extract part data</button>
+      <button id="clearBtn" class="ghost">Clear</button>
+    </div>
+    <div id="extractErr" class="error hidden"></div>
+    <div id="extractOut" class="result hidden">
+      <div class="tablewrap"><table id="extractTable"></table></div>
+    </div>
+  </section>
+
+  <!-- 2 + 3. BOM -->
+  <section class="card">
+    <h2><span class="num">2</span>Excel BOM → analysis and Word report</h2>
+    <p class="how">The first row of the sheet must hold the column names. English and Dutch names both work:</p>
+    <div class="cols tablewrap">
+      <table>
+        <tr><th>Needed</th><td><code>Part Number</code> / <code>Artikelnummer</code>, <code>Description</code> / <code>Omschrijving</code>, <code>Quantity</code> / <code>Aantal</code></td></tr>
+        <tr><th>Optional</th><td><code>Material</code> / <code>Materiaal</code>, <code>Weight (kg)</code> / <code>Gewicht (kg)</code> (weight of one part)</td></tr>
+      </table>
+    </div>
+
+    <div class="row" style="margin-top:16px">
+      <a class="btn ghost" href="/sample.xlsx" download>Download sample BOM</a>
+      <button id="useSample" class="ghost">Try with the sample</button>
+    </div>
+
+    <div id="drop" class="drop" style="margin-top:12px">
+      <p style="margin:0 0 8px"><strong>Drop an .xlsx file here</strong> or choose one (max 5 MB)</p>
+      <input id="fileInput" type="file" accept=".xlsx">
+    </div>
+
+    <div class="row">
+      <button id="analyzeBtn" disabled>Analyse BOM</button>
+      <button id="reportBtn" class="ghost" disabled>Download Word report</button>
+      <span id="fileName" class="how" style="margin:0"></span>
+    </div>
+
+    <div id="bomErr" class="error hidden"></div>
+    <div id="bomOut" class="result hidden">
+      <div class="kpis">
+        <div class="kpi"><small>Lines</small><b id="kLines"></b></div>
+        <div class="kpi"><small>Total quantity</small><b id="kQty"></b></div>
+        <div class="kpi"><small>Total weight</small><b id="kWeight"></b><small id="kWeightNote"></small></div>
+      </div>
+      <h3>AI summary</h3>
+      <div id="aiSummary" class="ai"></div>
+      <h3>Weight per material</h3>
+      <div class="tablewrap"><table id="matTable"></table></div>
+      <h3>Rows to check</h3>
+      <div id="issues"></div>
+      <h3>Parts</h3>
+      <div class="tablewrap"><table id="itemsTable"></table></div>
+    </div>
+  </section>
+
+  <footer>
+    <p><b>Mock mode</b> means no AI key is set: the service uses simple rules instead of an AI model, so you can try
+      everything for free. With a key it uses a real model. Totals and weights are always calculated in Python, so the
+      AI cannot change a number.</p>
+    <p>For developers: <a href="/docs">API documentation</a> · <a href="/health">health check</a> ·
+      <a href="https://github.com/dungphan294/bom-ai-service">source on GitHub</a></p>
+  </footer>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n, d = 2) => (n === null || n === undefined) ? "–"
+  : Number(n).toLocaleString("en-GB", { maximumFractionDigits: d });
+
+function show(el, on) { el.classList.toggle("hidden", !on); }
+function showError(el, msg) { el.textContent = msg; show(el, true); }
+
+async function errorText(res) {
+  try {
+    const body = await res.json();
+    if (typeof body.detail === "string") return body.detail;
+    if (Array.isArray(body.detail)) return body.detail.map(d => d.msg).join("; ");
+  } catch (_) {}
+  return `Request failed (${res.status})`;
+}
+
+function fillRows(table, rows, header) {
+  table.replaceChildren();
+  if (header) {
+    const tr = table.insertRow();
+    header.forEach(([text, cls]) => {
+      const th = document.createElement("th"); th.textContent = text; if (cls) th.className = cls; tr.appendChild(th);
+    });
+  }
+  rows.forEach(cells => {
+    const tr = table.insertRow();
+    cells.forEach(([text, cls]) => {
+      const td = tr.insertCell(); td.textContent = text; if (cls) td.className = cls;
+    });
+  });
+}
+
+// Mode badge
+fetch("/health").then(r => r.json()).then(h => {
+  const b = $("mode");
+  b.textContent = h.llm_mode === "live" ? "AI model connected" : "Mock mode (no AI key)";
+  b.classList.add(h.llm_mode);
+}).catch(() => { $("mode").textContent = "offline"; });
+
+// 1. Extract
+const LABELS = { part_name: "Part", material: "Material", quantity: "Quantity", dimensions_mm: "Dimensions (mm)",
+                 supplier: "Supplier", deadline: "Deadline", notes: "Notes" };
+$("clearBtn").onclick = () => { $("emailText").value = ""; show($("extractOut"), false); show($("extractErr"), false); };
+$("extractBtn").onclick = async () => {
+  const text = $("emailText").value.trim();
+  show($("extractErr"), false); show($("extractOut"), false);
+  if (!text) return showError($("extractErr"), "Paste some text first.");
+  const btn = $("extractBtn"); btn.disabled = true; btn.textContent = "Working…";
+  try {
+    const res = await fetch("/v1/extract", { method: "POST", headers: { "Content-Type": "application/json" },
+                                             body: JSON.stringify({ text }) });
+    if (!res.ok) return showError($("extractErr"), await errorText(res));
+    const { data } = await res.json();
+    fillRows($("extractTable"), Object.entries(LABELS).map(([k, label]) =>
+      [[label], [data[k] ?? "not found", data[k] == null ? "empty" : ""]]));
+    show($("extractOut"), true);
+  } catch (e) {
+    showError($("extractErr"), "Could not reach the service.");
+  } finally { btn.disabled = false; btn.textContent = "Extract part data"; }
+};
+
+// 2. BOM
+let currentFile = null;
+function setFile(file) {
+  currentFile = file;
+  $("fileName").textContent = file ? file.name : "";
+  $("analyzeBtn").disabled = $("reportBtn").disabled = !file;
+  show($("bomOut"), false); show($("bomErr"), false);
+}
+$("fileInput").onchange = (e) => setFile(e.target.files[0] || null);
+const drop = $("drop");
+["dragenter", "dragover"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave", "drop"].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => { if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]); });
+
+$("useSample").onclick = async () => {
+  const res = await fetch("/sample.xlsx");
+  if (!res.ok) return showError($("bomErr"), "Sample file not found.");
+  setFile(new File([await res.blob()], "sample_bom.xlsx"));
+  $("analyzeBtn").click();
+};
+
+function formData() { const fd = new FormData(); fd.append("file", currentFile, currentFile.name); return fd; }
+
+$("analyzeBtn").onclick = async () => {
+  if (!currentFile) return;
+  show($("bomErr"), false); show($("bomOut"), false);
+  const btn = $("analyzeBtn"); btn.disabled = true; btn.textContent = "Working…";
+  try {
+    const res = await fetch("/v1/bom/analyze", { method: "POST", body: formData() });
+    if (!res.ok) return showError($("bomErr"), await errorText(res));
+    const { summary: s, ai_summary } = await res.json();
+    $("kLines").textContent = s.total_lines;
+    $("kQty").textContent = fmt(s.total_quantity);
+    const noWeight = s.items.filter(i => i.unit_weight_kg == null).length;
+    const known = Object.values(s.weight_by_material_kg).reduce((a, b) => a + b, 0);
+    $("kWeight").textContent = s.total_weight_kg != null ? fmt(s.total_weight_kg) + " kg"
+                             : known > 0 ? "at least " + fmt(known) + " kg" : "–";
+    $("kWeightNote").textContent = noWeight ? `${noWeight} row${noWeight > 1 ? "s" : ""} without a weight` : "";
+    $("aiSummary").textContent = ai_summary;
+    const mats = Object.entries(s.weight_by_material_kg);
+    fillRows($("matTable"), mats.length ? mats.map(([m, w]) => [[m], [fmt(w) + " kg", "num-cell"]])
+                                        : [[["No weights in this file", "empty"]]],
+             mats.length ? [["Material"], ["Weight", "num-cell"]] : null);
+    const issues = $("issues"); issues.replaceChildren();
+    if (s.missing_data.length) {
+      const ul = document.createElement("ul"); ul.className = "issues";
+      s.missing_data.forEach(m => { const li = document.createElement("li"); li.textContent = m; ul.appendChild(li); });
+      issues.appendChild(ul);
+    } else { issues.textContent = "Nothing missing."; }
+    fillRows($("itemsTable"), s.items.map(i => [
+      [i.part_number], [i.description], [i.material ?? "–"], [fmt(i.quantity), "num-cell"],
+      [i.unit_weight_kg == null ? "–" : fmt(i.unit_weight_kg), "num-cell"],
+      [i.unit_weight_kg == null ? "–" : fmt(i.unit_weight_kg * i.quantity), "num-cell"]]),
+      [["Part no."], ["Description"], ["Material"], ["Qty", "num-cell"], ["kg each", "num-cell"], ["kg total", "num-cell"]]);
+    show($("bomOut"), true);
+  } catch (e) {
+    showError($("bomErr"), "Could not reach the service.");
+  } finally { btn.disabled = false; btn.textContent = "Analyse BOM"; }
+};
+
+$("reportBtn").onclick = async () => {
+  if (!currentFile) return;
+  show($("bomErr"), false);
+  const btn = $("reportBtn"); btn.disabled = true; btn.textContent = "Building report…";
+  try {
+    const res = await fetch("/v1/bom/report", { method: "POST", body: formData() });
+    if (!res.ok) return showError($("bomErr"), await errorText(res));
+    const url = URL.createObjectURL(await res.blob());
+    const a = document.createElement("a");
+    a.href = url; a.download = currentFile.name.replace(/\.xlsx$/i, "") + "_report.docx";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  } catch (e) {
+    showError($("bomErr"), "Could not reach the service.");
+  } finally { btn.disabled = false; btn.textContent = "Download Word report"; }
+};
+</script>
+</body>
+</html>

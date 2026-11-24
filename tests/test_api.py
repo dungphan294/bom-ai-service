@@ -146,3 +146,16 @@ def test_live_mode_summary_uses_llm():
         app.dependency_overrides.clear()
     assert r.json()["ai_summary"] == "Steel dominates the weight."
     assert r.json()["llm_mode"] == "live"
+
+
+def test_web_page(client):
+    r = client.get("/")
+    assert r.status_code == 200
+    assert "text/html" in r.headers["content-type"]
+    assert "BOM AI Service" in r.text
+
+
+def test_sample_download_is_a_valid_bom(client):
+    r = client.get("/sample.xlsx")
+    assert r.status_code == 200
+    assert upload(client, "/v1/bom/analyze", r.content).status_code == 200

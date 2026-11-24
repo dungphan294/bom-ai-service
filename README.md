@@ -22,11 +22,11 @@ flowchart LR
 ```bash
 python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
-pytest -q                                            # 14 tests
+pytest -q                                            # 16 tests
 uvicorn app.main:app --reload
 ```
 
-Open http://localhost:8000/docs for the interactive API docs.
+Open http://localhost:8000 for the web page: paste a customer email, upload an Excel BOM (or click *Try with the sample*) and download the Word report. Developers can use the interactive API docs at http://localhost:8000/docs.
 
 To use a real LLM, copy `.env.example` to `.env`, add your key, and export the variables (or set them in your shell) before starting.
 
@@ -47,7 +47,7 @@ curl -F file=@sample_data/sample_bom.xlsx localhost:8000/v1/bom/report -o report
 2. Get a free API key at https://console.groq.com (optional; without one it runs in mock mode).
 3. On https://render.com: **New > Blueprint**, select the repo. Render reads `render.yaml`.
 4. Paste your key into `LLM_API_KEY` and deploy. If Groq has retired the model in `render.yaml`, pick a current one from https://console.groq.com/docs/models and change `LLM_MODEL`.
-5. Your API docs are live at `https://<your-app>.onrender.com/docs`.
+5. The web page is live at `https://<your-app>.onrender.com` and the API docs at `/docs`.
 
 The free Render plan sleeps after inactivity, so the first request can take ~30 seconds.
 
@@ -57,7 +57,7 @@ The free Render plan sleeps after inactivity, so the first request can take ~30 
 - **Mock mode**: CI and demos never depend on a paid API or network.
 - **Deterministic maths, LLM for language**: totals and weights are calculated in Python; the LLM only writes the summary and extracts text, so numbers can't be hallucinated.
 - **Validation and clear errors**: wrong file type (415), too large (413), bad BOM data (422 with the row number), LLM failure (502).
-- **Tests**: 14 pytest tests, including live-mode tests with a fake LLM client.
+- **Tests**: 16 pytest tests, including live-mode tests with a fake LLM client.
 
 ## Ideas for next steps
 
